@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  NetSuiteInstance:
+    Type: String
+    Default: 'sandbox'
+    Description: sandbox/production
+Resources:
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - '-'
+        - - 'skydoc'
+          - !Ref NetSuiteInstance
+          - !Sub '${AWS::Region}-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders: ['*']
+          AllowedOrigins: ['*']
+          AllowedMethods: ['GET','PUT','POST','HEAD','DELETE']
+          ExposedHeaders: ['x-amz-meta-param','x-amz-version-id','ETag']
+          Id: skydoc
+
+  MyUser:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+      - !Ref MyGroup
+
+  TvarnaUser:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+      - !Ref MyGroup
+
+  MyGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+      - arn:aws:iam::aws:policy/IAMFullAccess
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+
+  CFNKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        Ref: MyUser
+
+  TvarnaKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        Ref: TvarnaUser
+
+
+Outputs:
+  AccessKeyformyaccesskey:
+    Value:
+      !Ref CFNKey
+  SecretKeyformyaccesskey:
+    Value: !GetAtt CFNKey.SecretAccessKey
+
+  AccessKeyforTvarna:
+    Value:
+      !Ref TvarnaKey
+  SecretKeyforTvarna:
+    Value: !GetAtt TvarnaKey.SecretAccessKey
